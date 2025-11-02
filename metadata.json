@@ -1,0 +1,4 @@
+{
+  "name": "React Chess Clock",
+  "description": "A sleek, modern chess clock application built with React and Tailwind CSS. It allows two players to set custom time controls and increments, features a pause function, a sound alert on flag fall, and a dark/light mode toggle."
+}

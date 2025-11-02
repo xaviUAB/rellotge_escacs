@@ -1,0 +1,350 @@
+<!DOCTYPE html>
+<html lang="ca">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Rellotge d'Escacs</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+        }
+    </script>
+    <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <style>
+      html, body, #root, #root > main {
+        height: 100%;
+        margin: 0;
+        padding: 0;
+      }
+      .dark {
+        color-scheme: dark;
+      }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect, useRef, useCallback } = React;
+
+        // --- Icons ---
+        const PlayIcon = ({ className }) => (
+          <svg className={className} xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M8 5v14l11-7z" />
+          </svg>
+        );
+
+        const PauseIcon = ({ className }) => (
+          <svg className={className} xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z" />
+          </svg>
+        );
+
+        const SunIcon = ({ className }) => (
+          <svg className={className} xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
+          </svg>
+        );
+
+        const MoonIcon = ({ className }) => (
+          <svg className={className} xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
+          </svg>
+        );
+
+        // --- SetupScreen Component ---
+        const SetupScreen = ({ onStartGame, initialSettings }) => {
+          const [player1Name, setPlayer1Name] = useState(initialSettings?.player1Name || 'Jugador 1');
+          const [player2Name, setPlayer2Name] = useState(initialSettings?.player2Name || 'Jugador 2');
+          const [minutes, setMinutes] = useState(initialSettings ? String(initialSettings.initialTime / 60) : '5');
+          const [increment, setIncrement] = useState(initialSettings ? String(initialSettings.increment) : '3');
+          const [error, setError] = useState('');
+
+          const handleSubmit = (e) => {
+            e.preventDefault();
+            const initialTime = parseInt(minutes, 10) * 60;
+            const incrementSec = parseInt(increment, 10);
+
+            if (isNaN(initialTime) || initialTime <= 0) {
+              setError('El temps ha de ser superior a 0.');
+              return;
+            }
+            if (isNaN(incrementSec) || incrementSec < 0) {
+              setError("L'increment no pot ser negatiu.");
+              return;
+            }
+            setError('');
+            onStartGame({
+              player1Name: player1Name.trim() || 'Jugador 1',
+              player2Name: player2Name.trim() || 'Jugador 2',
+              initialTime: initialTime,
+              increment: incrementSec,
+            });
+          };
+
+          return (
+            <div className="flex items-center justify-center min-h-screen bg-slate-100 dark:bg-slate-900 transition-colors duration-300">
+              <div className="w-full max-w-md p-8 space-y-8 bg-white dark:bg-slate-800 rounded-2xl shadow-lg">
+                <h1 className="text-3xl font-bold text-center text-slate-800 dark:text-white">Rellotge d'Escacs</h1>
+                <form onSubmit={handleSubmit} className="space-y-6">
+                  <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                    <div>
+                      <label htmlFor="player1" className="block text-sm font-medium text-slate-700 dark:text-slate-300">Nom Jugador 1</label>
+                      <input type="text" id="player1" value={player1Name} onChange={e => setPlayer1Name(e.target.value)} className="mt-1 block w-full px-3 py-2 bg-white dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded-md text-sm shadow-sm placeholder-slate-400 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 dark:text-white" />
+                    </div>
+                    <div>
+                      <label htmlFor="player2" className="block text-sm font-medium text-slate-700 dark:text-slate-300">Nom Jugador 2</label>
+                      <input type="text" id="player2" value={player2Name} onChange={e => setPlayer2Name(e.target.value)} className="mt-1 block w-full px-3 py-2 bg-white dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded-md text-sm shadow-sm placeholder-slate-400 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 dark:text-white" />
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                    <div>
+                        <label htmlFor="minutes" className="block text-sm font-medium text-slate-700 dark:text-slate-300">Temps (minuts)</label>
+                        <input type="number" id="minutes" value={minutes} onChange={e => setMinutes(e.target.value)} min="1" className="mt-1 block w-full px-3 py-2 bg-white dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded-md text-sm shadow-sm placeholder-slate-400 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 dark:text-white" />
+                    </div>
+                    <div>
+                        <label htmlFor="increment" className="block text-sm font-medium text-slate-700 dark:text-slate-300">Increment (segons)</label>
+                        <input type="number" id="increment" value={increment} onChange={e => setIncrement(e.target.value)} min="0" className="mt-1 block w-full px-3 py-2 bg-white dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded-md text-sm shadow-sm placeholder-slate-400 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 dark:text-white" />
+                    </div>
+                  </div>
+                  {error && <p className="text-sm text-red-500 text-center">{error}</p>}
+                  <div>
+                    <button type="submit" className="w-full flex justify-center py-3 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-all duration-200">
+                      Començar Partida
+                    </button>
+                  </div>
+                </form>
+              </div>
+            </div>
+          );
+        };
+
+        // --- GameScreen Component ---
+        const formatTime = (totalSeconds) => {
+          if (totalSeconds < 0) totalSeconds = 0;
+          
+          const minutes = Math.floor(totalSeconds / 60);
+          const seconds = Math.floor(totalSeconds % 60);
+          const tenths = Math.floor((totalSeconds * 10) % 10);
+
+          const formattedMinutes = String(minutes).padStart(2, '0');
+          const formattedSeconds = String(seconds).padStart(2, '0');
+
+          if (totalSeconds < 20 && totalSeconds > 0) {
+            return `${formattedMinutes}:${formattedSeconds}.${tenths}`;
+          }
+          
+          return `${formattedMinutes}:${formattedSeconds}`;
+        };
+
+        const GameScreen = ({ settings, onNewGame }) => {
+          const [player1Time, setPlayer1Time] = useState(settings.initialTime);
+          const [player2Time, setPlayer2Time] = useState(settings.initialTime);
+          const [activePlayer, setActivePlayer] = useState(null);
+          const [isPaused, setIsPaused] = useState(false);
+          const [winner, setWinner] = useState(null);
+
+          const flagFallSoundRef = useRef(null);
+
+          useEffect(() => {
+            const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            
+            const playSound = () => {
+                if (audioContext.state === 'suspended') {
+                    audioContext.resume();
+                }
+                const oscillator = audioContext.createOscillator();
+                const gainNode = audioContext.createGain();
+                
+                oscillator.connect(gainNode);
+                gainNode.connect(audioContext.destination);
+                
+                oscillator.type = 'square';
+                oscillator.frequency.setValueAtTime(1000, audioContext.currentTime);
+                gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+                
+                oscillator.start();
+                oscillator.stop(audioContext.currentTime + 0.3);
+            };
+
+            flagFallSoundRef.current = { play: playSound };
+            
+            return () => {
+                audioContext.close();
+            };
+          }, []);
+
+          useEffect(() => {
+            if (isPaused || !activePlayer || winner) {
+              return;
+            }
+
+            const intervalId = setInterval(() => {
+              const timeSetter = activePlayer === 1 ? setPlayer1Time : setPlayer2Time;
+              
+              timeSetter(prevTime => {
+                const newTime = prevTime - 0.1;
+                if (newTime <= 0) {
+                  clearInterval(intervalId);
+                  setWinner(activePlayer === 1 ? 2 : 1);
+                  flagFallSoundRef.current?.play();
+                  return 0;
+                }
+                return newTime;
+              });
+            }, 100);
+
+            return () => clearInterval(intervalId);
+          }, [activePlayer, isPaused, winner]);
+
+          const handlePlayerPress = useCallback((player) => {
+            if (winner || isPaused) return;
+            
+            if (activePlayer === null) {
+              setIsPaused(false); // Make sure game starts if it was paused at 0
+              setActivePlayer(player === 1 ? 2 : 1);
+              return;
+            }
+
+            if (activePlayer !== player) return;
+
+            if (player === 1) {
+              setPlayer1Time(t => t + settings.increment);
+              setActivePlayer(2);
+            } else {
+              setPlayer2Time(t => t + settings.increment);
+              setActivePlayer(1);
+            }
+          }, [activePlayer, isPaused, winner, settings.increment]);
+
+          const togglePause = () => {
+             if (winner || activePlayer === null) return;
+             setIsPaused(p => !p);
+          };
+
+          const handleNewGameClick = () => {
+            if (window.confirm("Vols començar una nova partida? Es perdrà el progrés actual.")) {
+                onNewGame();
+            }
+          };
+
+          const getClockClasses = (player, position) => {
+            const isActive = activePlayer === player && !isPaused;
+            const isLoser = winner !== null && winner !== player;
+
+            return `
+              flex-1 flex flex-col items-center justify-center w-full h-full text-white cursor-pointer select-none transition-all duration-300
+              ${isActive ? 'bg-green-500 dark:bg-green-600' : 'bg-slate-700 dark:bg-slate-800'}
+              ${winner && !isLoser ? 'bg-yellow-500 dark:bg-yellow-600' : ''}
+              ${winner && isLoser ? 'bg-red-600 dark:bg-red-700 opacity-70' : ''}
+              ${position === 'top' ? 'transform rotate-180' : ''}
+            `;
+          };
+          
+          const loserName = winner ? (winner === 1 ? settings.player2Name : settings.player1Name) : null;
+
+          return (
+            <div className="flex flex-col h-screen w-screen bg-slate-300 dark:bg-black">
+              {winner && (
+                <div className="absolute inset-0 bg-black bg-opacity-70 flex flex-col justify-center items-center z-10 text-white p-4">
+                  <h2 className="text-4xl sm:text-6xl font-bold mb-4 text-center">Final de la Partida!</h2>
+                  <p className="text-2xl sm:text-4xl text-center">
+                    {`S'ha acabat el temps per a ${loserName}.`}
+                  </p>
+                  <button onClick={onNewGame} className="mt-8 px-8 py-3 bg-indigo-600 hover:bg-indigo-700 rounded-lg text-xl font-semibold transition-colors">
+                    Tornar a Jugar
+                  </button>
+                </div>
+              )}
+              <div onClick={() => handlePlayerPress(2)} className={getClockClasses(2, 'top')}>
+                <h2 className="text-3xl sm:text-5xl font-light">{settings.player2Name}</h2>
+                <p className="text-6xl sm:text-9xl font-mono font-bold tracking-tighter">{formatTime(player2Time)}</p>
+              </div>
+
+              <div className="relative bg-slate-200 dark:bg-slate-900 h-[70px] sm:h-[80px]">
+                <button onClick={handleNewGameClick} title="Nova Partida" className="absolute left-4 sm:left-6 top-1/2 -translate-y-1/2 px-4 py-2 text-sm sm:text-base rounded-lg text-slate-800 dark:text-slate-200 bg-slate-300 dark:bg-slate-700 hover:bg-slate-400 dark:hover:bg-slate-600 transition-colors font-semibold">
+                  Nova Partida
+                </button>
+                <button onClick={togglePause} title={isPaused ? "Reprendre" : "Pausa"} className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 p-2 sm:p-3 rounded-full bg-slate-800 dark:bg-white text-white dark:text-black disabled:opacity-50" disabled={activePlayer === null || !!winner}>
+                  {isPaused ? (
+                    <PlayIcon className="w-6 h-6 sm:w-8 sm:h-8" />
+                  ) : (
+                    <PauseIcon className="w-6 h-6 sm:w-8 sm:h-8" />
+                  )}
+                </button>
+              </div>
+
+              <div onClick={() => handlePlayerPress(1)} className={getClockClasses(1, 'bottom')}>
+                <h2 className="text-3xl sm:text-5xl font-light">{settings.player1Name}</h2>
+                <p className="text-6xl sm:text-9xl font-mono font-bold tracking-tighter">{formatTime(player1Time)}</p>
+              </div>
+            </div>
+          );
+        };
+        
+        // --- App Component ---
+        const App = () => {
+          const [gameStatus, setGameStatus] = useState('setup');
+          const [gameSettings, setGameSettings] = useState(null);
+          const [theme, setTheme] = useState(() => {
+            if (typeof window !== 'undefined' && window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+                return 'dark';
+            }
+            return 'light';
+          });
+
+          useEffect(() => {
+            const root = window.document.documentElement;
+            if (theme === 'dark') {
+              root.classList.add('dark');
+            } else {
+              root.classList.remove('dark');
+            }
+          }, [theme]);
+
+          const handleStartGame = useCallback((settings) => {
+            setGameSettings(settings);
+            setGameStatus('playing');
+          }, []);
+
+          const handleNewGame = useCallback(() => {
+            setGameStatus('setup');
+          }, []);
+
+          const toggleTheme = () => {
+            setTheme(prevTheme => (prevTheme === 'light' ? 'dark' : 'light'));
+          };
+
+          const renderContent = () => {
+            if (gameStatus === 'setup') {
+              return <SetupScreen onStartGame={handleStartGame} initialSettings={gameSettings} />;
+            }
+            return <GameScreen settings={gameSettings} onNewGame={handleNewGame} />;
+          };
+
+          return (
+            <main className="font-sans">
+              {renderContent()}
+              <button 
+                onClick={toggleTheme} 
+                className="fixed top-4 right-4 p-2 rounded-full bg-slate-200 dark:bg-slate-700 text-slate-800 dark:text-slate-200 shadow-md hover:scale-110 transition-transform z-20">
+                {theme === 'light' ? <MoonIcon className="w-6 h-6" /> : <SunIcon className="w-6 h-6" />}
+              </button>
+              <footer className="fixed bottom-0 w-full text-center py-2 text-xs text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-900 z-20">
+                Una idea de Xavier Ribes
+              </footer>
+            </main>
+          );
+        }
+
+        // --- Render App ---
+        const rootElement = document.getElementById('root');
+        const root = ReactDOM.createRoot(rootElement);
+        root.render(<App />);
+
+    </script>
+</body>
+</html>
